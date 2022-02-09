@@ -1,37 +1,69 @@
 const userModel = require('../db/UserSchema')
 const otpModel = require('../db/OtpSchema');
-const path = require('path');
-// To get the registered users
-async function getUsers(req,res,next){
-    let user = await userModel.find();
-    
-    res.status(200).json({
-        success:true,
-        status_code:200,
-        user,
+const {auth} = require('../middleware/authJWT')
+
+// To Register new user
+async function addUsers(req,res){
+    console.log(req.body);
+    const user = new userModel(req.body);
+
+    user.save((err) => {
+        if (err) return res.json({ success: false, err });
+        else{
+        return res.status(200).json({
+            success: true
+        });
+    }
     });
 }
-
-// To add users
-async function postUsers(data){
-    let ins =await new userModel(data);
-    ins.save((err)=>{
-        if (err){
-            console.log(err);
-        };
-    })
+// User uthentication
+async function authenticate(req,res){
+        res.status(200).json({
+            _id: req.user._id,
+            isAdmin: req.user.role === 0 ? false : true,
+            isAuth: true,
+            email: req.user.email,
+            name: req.user.name,
+            lastname: req.user.lastname,
+            role: req.user.role,
+            image: req.user.image,
+        });
+}
+// User Login
+async function Login(req,res){
+    console.log(req.body);
+    userModel.findOne({ email: req.body.email }, (err, user) => {
+        if (!user)
+            return res.json({
+                loginSuccess: false,
+                message: "Auth failed, email not found"
+            });
+    
+        user.comparePassword(req.body.password, (err, isMatch) => {
+            if (!isMatch)
+                return res.json({ loginSuccess: false, message: "Wrong password" });
+    
+        user.generateToken((err, user) => {
+            if (err) return res.status(400).send(err);
+            res.cookie("w_authExp", user.tokenExp);
+            res
+                .cookie("w_auth", user.token)
+                .status(200)
+                .json({
+                    loginSuccess: true
+                });
+            });
+        });
+    });
 }
 // User Logout
 async function logout(req,res){
-    res.cookie("token", null, {
-        expires: new Date(Date.now()),
-        httpOnly: true,
-      });
-    
-      res.status(200).json({
-        success: true,
-        message: "Logged Out",
-      });
+    userModel.findOneAndUpdate({ _id: req.user._id }, { token: "", tokenExp: "" }, (err, doc) => {
+        if (err) return res.json({ success: false, err });
+        return res.status(200).send({
+            success: true
+        });
+    });   
 }
 
 // Generate otp and send it on email
@@ -119,61 +151,5 @@ const mailer=async(email,otp)=>{
         }
       });
 }
-// To update user profile
-async function updateProfile(req,res){
-    console.log(req.body);
-    const user = userModel.findOne({email:req.body.email})                          
-    if(!user){
-        res.json({
-            message:"User not found"
-        })
-    }
-    else if(user){
-        console.log("myemail",user);
-        let file = req.files.profile_img;
-        console.log(file.name);
-        file.mv('C:/Users/Neosoft/Documents/Neostore/neoStore/neostore/public/Uploads/'+ file.name)
-        userModel.updateOne({
-            email:req.body.email,
-            firstname:req.body.firstname,
-            LastName:req.body.LastName,
-            mobile:req.body.mobile,
-            password:req.body.password,
-            //profile_img:file.name,
-            });
-        }
-    else{
-        res.status(200).json({
-            success:true,
-            status_code:200,
-            message:"Profile updated successfully"
-        })
-    }
-};
-// Get User Detail
-async function getUserDetails(req, res, next){
-    const user = await userModel.findById(req.user.id);
-  
-    res.status(200).json({
-      success: true,
-      user,
-    });
-}
 
-
-// post User Detail
-async function postUserData(req, res, next){
-   const user= userModel.findOne({ emailAddress: req.body.email}, (err, data) => {
-        // console.log(data)
-        if (err) {
-            res.send("its error")
-        }
-        else{
-            res.json({
-                data:data
-            })
-        }
-    })
-}
-
-module.exports={postUsers,getUsers,logout,sendEmail,changePassword,updateProfile,getUserDetails,postUserData}
+module.exports={addUsers,logout,authenticate,Login}

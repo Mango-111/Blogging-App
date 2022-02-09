@@ -1,9 +1,18 @@
 const express = require('express');
-const { addBlog } = require('../Controller/BlogController');
+const { upload, createPost, getBlogs, getPosts, addPosts } = require('../Controller/BlogController');
 const router = express.Router()
 
-router.post('/addPost',(req,res)=>{
-    addBlog(req,res);  
+router.post('/uploadfiles',(req,res)=>{ 
+    addPosts(req,res);
+});
+router.post('/createPost',(req,res)=>{
+    createPost(req,res);  
+});
+router.get('/getBlogs',(req,res)=>{
+    getBlogs(req,res);  
+});
+router.post('/getPost',(req,res)=>{
+    getPosts(req,res);  
 });
 
 module.exports = router

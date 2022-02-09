@@ -1,7 +1,8 @@
 const express = require('express');
 const port=8877;
 const app = express();
-bodyParser = require("body-parser")
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 
 const cors = require('cors');
 
@@ -9,6 +10,9 @@ app.use(express.json());
 app.use(express.urlencoded({extended:false}));
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
+
+app.use('/uploads', express.static('uploads'));
 
 // Handling uncaught exception
 process.on("uncaughtException",(err)=>{
